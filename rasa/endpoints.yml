@@ -1,0 +1,22 @@
+action_endpoint:
+    url: "http://127.0.0.1:5055/webhook"
+
+inner_url:
+  domain: "http://preprod.demo.com.cn/"
+
+tracker_store:
+  type: redis
+  url: 10.64.57.9
+  port: 6669
+  db: 1
+  password: 7yIclQHNMOVGj2w8mOTi
+  record_exp: 1800
+
+lock_store:
+  type: redis
+  url: 10.64.57.9
+  port: 6669
+  password: 7yIclQHNMOVGj2w8mOTi
+  db: 0
+  key_prefix: rasa
+
