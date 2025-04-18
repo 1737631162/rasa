@@ -4,6 +4,13 @@ import logging
 import multiprocessing
 import os
 import traceback
+import json
+from datetime import datetime
+
+import redis
+import requests
+import yaml
+from yaml.resolver import BaseResolver
 from collections import defaultdict
 from functools import reduce, wraps
 from inspect import isawaitable
@@ -90,7 +97,6 @@ if TYPE_CHECKING:
         Coroutine[Any, Any, SanicResponse],
     ]
 
-
 logger = logging.getLogger(__name__)
 
 JSON_CONTENT_TYPE = "application/json"
@@ -105,12 +111,12 @@ class ErrorResponse(Exception):
     """Common exception to handle failing API requests."""
 
     def __init__(
-        self,
-        status: Union[int, HTTPStatus],
-        reason: Text,
-        message: Text,
-        details: Any = None,
-        help_url: Optional[Text] = None,
+            self,
+            status: Union[int, HTTPStatus],
+            reason: Text,
+            message: Text,
+            details: Any = None,
+            help_url: Optional[Text] = None,
     ) -> None:
         """Creates error.
 
@@ -141,7 +147,7 @@ def _docs(sub_url: Text) -> Text:
 
 
 def ensure_loaded_agent(
-    app: Sanic, require_core_is_ready: bool = False
+        app: Sanic, require_core_is_ready: bool = False
 ) -> Callable[[Callable], Callable[..., Any]]:
     """Wraps a request handler ensuring there is a loaded and usable agent.
 
@@ -175,7 +181,7 @@ def ensure_conversation_exists() -> Callable[["SanicView"], "SanicView"]:
     def decorator(f: "SanicView") -> "SanicView":
         @wraps(f)
         async def decorated(
-            request: Request, *args: Any, **kwargs: Any
+                request: Request, *args: Any, **kwargs: Any
         ) -> "SanicResponse":
             conversation_id = kwargs["conversation_id"]
             if await request.app.ctx.agent.tracker_store.exists(conversation_id):
@@ -191,7 +197,7 @@ def ensure_conversation_exists() -> Callable[["SanicView"], "SanicView"]:
 
 
 def requires_auth(
-    app: Sanic, token: Optional[Text] = None
+        app: Sanic, token: Optional[Text] = None
 ) -> Callable[["SanicView"], "SanicView"]:
     """Wraps a request handler with token authentication."""
 
@@ -210,7 +216,7 @@ def requires_auth(
                 return None
 
         async def sufficient_scope(
-            request: Request, *args: Any, **kwargs: Any
+                request: Request, *args: Any, **kwargs: Any
         ) -> Optional[bool]:
             # This is a coroutine since `sanic-jwt==1.6`
             jwt_data = await rasa.utils.common.call_potential_coroutine(
@@ -232,7 +238,7 @@ def requires_auth(
 
         @wraps(f)
         async def decorated(
-            request: Request, *args: Any, **kwargs: Any
+                request: Request, *args: Any, **kwargs: Any
         ) -> response.HTTPResponse:
 
             provided = request.args.get("token", None)
@@ -242,7 +248,7 @@ def requires_auth(
                 result = f(request, *args, **kwargs)
                 return await result if isawaitable(result) else result
             elif app.config.get(
-                "USE_JWT"
+                    "USE_JWT"
             ) and await rasa.utils.common.call_potential_coroutine(
                 # This is a coroutine since `sanic-jwt==1.6`
                 request.app.ctx.auth.is_authenticated(request)
@@ -277,7 +283,7 @@ def requires_auth(
 
 
 def event_verbosity_parameter(
-    request: Request, default_verbosity: EventVerbosity
+        request: Request, default_verbosity: EventVerbosity
 ) -> EventVerbosity:
     """Create `EventVerbosity` object using request params if present."""
     event_verbosity_str = request.args.get(
@@ -297,10 +303,10 @@ def event_verbosity_parameter(
 
 
 async def get_test_stories(
-    processor: "MessageProcessor",
-    conversation_id: Text,
-    until_time: Optional[float],
-    fetch_all_sessions: bool = False,
+        processor: "MessageProcessor",
+        conversation_id: Text,
+        until_time: Optional[float],
+        fetch_all_sessions: bool = False,
 ) -> Text:
     """Retrieves test stories from `processor` for all conversation sessions for
     `conversation_id`.
@@ -348,10 +354,10 @@ async def get_test_stories(
 
 
 async def update_conversation_with_events(
-    conversation_id: Text,
-    processor: "MessageProcessor",
-    domain: Domain,
-    events: List[Event],
+        conversation_id: Text,
+        processor: "MessageProcessor",
+        domain: Domain,
+        events: List[Event],
 ) -> DialogueStateTracker:
     """Fetches or creates a tracker for `conversation_id` and appends `events` to it.
 
@@ -410,10 +416,10 @@ async def authenticate(_: Request) -> NoReturn:
 
 
 def create_ssl_context(
-    ssl_certificate: Optional[Text],
-    ssl_keyfile: Optional[Text],
-    ssl_ca_file: Optional[Text] = None,
-    ssl_password: Optional[Text] = None,
+        ssl_certificate: Optional[Text],
+        ssl_keyfile: Optional[Text],
+        ssl_ca_file: Optional[Text] = None,
+        ssl_password: Optional[Text] = None,
 ) -> Optional["SSLContext"]:
     """Create an SSL context if a proper certificate is passed.
 
@@ -471,10 +477,10 @@ def _create_emulator(mode: Optional[Text]) -> Emulator:
 
 
 async def _load_agent(
-    model_path: Optional[Text] = None,
-    model_server: Optional[EndpointConfig] = None,
-    remote_storage: Optional[Text] = None,
-    endpoints: Optional[AvailableEndpoints] = None,
+        model_path: Optional[Text] = None,
+        model_server: Optional[EndpointConfig] = None,
+        remote_storage: Optional[Text] = None,
+        endpoints: Optional[AvailableEndpoints] = None,
 ) -> Agent:
     try:
         loaded_agent = await rasa.core.agent.load_agent(
@@ -503,7 +509,7 @@ async def _load_agent(
 
 
 def configure_cors(
-    app: Sanic, cors_origins: Union[Text, List[Text], None] = ""
+        app: Sanic, cors_origins: Union[Text, List[Text], None] = ""
 ) -> None:
     """Configure CORS origins for the given app."""
     # Workaround so that socketio works with requests from other origins.
@@ -543,7 +549,7 @@ def async_if_callback_url(f: Callable[..., Coroutine]) -> Callable:
 
     @wraps(f)
     async def decorated_function(
-        request: Request, *args: Any, **kwargs: Any
+            request: Request, *args: Any, **kwargs: Any
     ) -> HTTPResponse:
         callback_url = request.args.get("callback_url")
         # Only process request asynchronously if the user specified a `callback_url`
@@ -555,7 +561,7 @@ def async_if_callback_url(f: Callable[..., Coroutine]) -> Callable:
             try:
                 result: HTTPResponse = await f(request, *args, **kwargs)
                 payload: Dict[Text, Any] = dict(
-                    data=result.body, headers={"Content-Type": result.content_type}
+                    json={"version": "3.6.2", "status": "success", "filename": result.headers.get("filename"), "code": 200}
                 )
                 logger.debug(
                     "Asynchronous processing of request was successful. "
@@ -605,7 +611,7 @@ def run_in_thread(f: Callable[..., Coroutine]) -> Callable:
 
     @wraps(f)
     async def decorated_function(
-        request: Request, *args: Any, **kwargs: Any
+            request: Request, *args: Any, **kwargs: Any
     ) -> HTTPResponse:
         # Use a sync wrapper for our `async` function as `run_in_executor` only supports
         # sync functions
@@ -637,20 +643,78 @@ def inject_temp_dir(f: Callable[..., Coroutine]) -> Callable:
     return decorated_function
 
 
+def parse_filename(filename):
+    date_str = filename.split('-')[0] + '-' + filename.split('-')[1]
+    # 将日期字符串转换为datetime对象
+    return datetime.strptime(date_str, '%Y%m%d-%H%M%S')
+
+
 def create_app(
-    agent: Optional["Agent"] = None,
-    cors_origins: Union[Text, List[Text], None] = "*",
-    auth_token: Optional[Text] = None,
-    response_timeout: int = DEFAULT_RESPONSE_TIMEOUT,
-    jwt_secret: Optional[Text] = None,
-    jwt_private_key: Optional[Text] = None,
-    jwt_method: Text = "HS256",
-    endpoints: Optional[AvailableEndpoints] = None,
+        agent: Optional["Agent"] = None,
+        cors_origins: Union[Text, List[Text], None] = "*",
+        auth_token: Optional[Text] = None,
+        response_timeout: int = DEFAULT_RESPONSE_TIMEOUT,
+        jwt_secret: Optional[Text] = None,
+        jwt_private_key: Optional[Text] = None,
+        jwt_method: Text = "HS256",
+        endpoints: Optional[AvailableEndpoints] = None,
 ) -> Sanic:
     """Class representing a Rasa HTTP server."""
+
     app = Sanic("rasa_server")
+    app.config["API_BASEPATH"] = "/vbot-intent-task-data"
     app.config.RESPONSE_TIMEOUT = response_timeout
     configure_cors(app, cors_origins)
+
+    # 新增定时任务，从文件云查询最新模型并加载
+    async def load_model_from_file_cloud(app):
+
+        while True:
+            await asyncio.sleep(600)
+            logger.info('定时从文件云获取模型')
+            with open('endpoints.yml') as f:
+                config = yaml.safe_load(f)
+                redis_config = config.get('tracker_store')
+            redis_connection = redis.Redis(host=redis_config.get('url'), port=redis_config.get('port'),
+                                           password=redis_config.get('password'), decode_responses=True)
+            if redis_connection.get('rasa_model_data'):
+                domain = config.get('inner_url').get('domain')
+                dsshandle = redis_connection.get('rasa_model_data')
+                file_download_url = f'{domain}filecloud/filedown/down?dsshandle={dsshandle}'
+                res = requests.get(file_download_url)
+                logger.info('从文件云请求模型，dsshandle: ' + dsshandle)
+                if res.status_code == 200:
+                    file_could_model_name = res.headers.get('filename')
+                    logger.info('从文件云获取的模型名称为：' + file_could_model_name)
+                    file_list = os.listdir('models')
+                    if file_could_model_name not in file_list:
+                        with open('models/' + file_could_model_name, 'wb') as latest_model:
+                            latest_model.write(res.content)
+                        file_list_latest = os.listdir('models')
+                        files_with_dates = [(parse_filename(file), file) for file in file_list_latest if
+                                            file.endswith('.tar.gz')]
+                        files_with_dates.sort(key=lambda x: x[0], reverse=True)
+                        newest_file = files_with_dates[0][1]
+                        if file_could_model_name == newest_file:
+                            model_path = 'models/' + file_could_model_name
+                            new_agent = await _load_agent(
+                                model_path=model_path,
+                                endpoints=endpoints,
+                            )
+                            new_agent.lock_store = app.ctx.agent.lock_store
+                            app.ctx.agent = new_agent
+
+                            logger.info(f"Successfully loaded model '{model_path}'.")
+                        else:
+                            logger.info(f"当前模型'{newest_file}'已是最新，无可更新的模型")
+                    else:
+                        logger.info('当前模型已为最新')
+                else:
+                    logger.info('文件云暂无模型')
+            else:
+                logger.info('缓存中暂无模型')
+
+    app.add_task(load_model_from_file_cloud(app))
 
     # Set up the Sanic-JWT extension
     if jwt_secret and jwt_method:
@@ -683,13 +747,13 @@ def create_app(
 
     @app.exception(ErrorResponse)
     async def handle_error_response(
-        request: Request, exception: ErrorResponse
+            request: Request, exception: ErrorResponse
     ) -> HTTPResponse:
         return response.json(exception.error_info, status=exception.status)
 
     add_root_route(app)
 
-    @app.get("/version")
+    @app.get("/vbot-intent-task-data/version")
     async def version(request: Request) -> HTTPResponse:
         """Respond with the version number of the installed Rasa."""
         return response.json(
@@ -699,7 +763,7 @@ def create_app(
             }
         )
 
-    @app.get("/status")
+    @app.get("/vbot-intent-task-data/status")
     @requires_auth(app, auth_token)
     @ensure_loaded_agent(app)
     async def status(request: Request) -> HTTPResponse:
@@ -712,7 +776,35 @@ def create_app(
             }
         )
 
-    @app.get("/conversations/<conversation_id:path>/tracker")
+    @app.get("/vbot-intent-task-data/conversations/<conversation_id:path>/tracker/intent")
+    @requires_auth(app, auth_token)
+    @ensure_loaded_agent(app)
+    async def retrieve_tracker_intent(request: Request, conversation_id: Text) -> HTTPResponse:
+        """Get a dump of a conversation's tracker including its events."""
+        verbosity = event_verbosity_parameter(request, EventVerbosity.AFTER_RESTART)
+        until_time = rasa.utils.endpoints.float_arg(request, "until")
+
+        tracker = await app.ctx.agent.processor.fetch_full_tracker_with_initial_session(
+            conversation_id,
+            output_channel=CollectingOutputChannel(),
+        )
+
+        try:
+            if until_time is not None:
+                tracker = tracker.travel_back_in_time(until_time)
+
+            state = tracker.current_state(verbosity)
+            intent = state['latest_message']['intent']
+            return response.json(intent)
+        except Exception as e:
+            logger.debug(traceback.format_exc())
+            raise ErrorResponse(
+                HTTPStatus.INTERNAL_SERVER_ERROR,
+                "ConversationError",
+                f"An unexpected error occurred. Error: {e}",
+            )
+
+    @app.get("/vbot-intent-task-data/conversations/<conversation_id:path>/tracker")
     @requires_auth(app, auth_token)
     @ensure_loaded_agent(app)
     async def retrieve_tracker(request: Request, conversation_id: Text) -> HTTPResponse:
@@ -739,7 +831,7 @@ def create_app(
                 f"An unexpected error occurred. Error: {e}",
             )
 
-    @app.post("/conversations/<conversation_id:path>/tracker/events")
+    @app.post("/vbot-intent-task-data/conversations/<conversation_id:path>/tracker/events")
     @requires_auth(app, auth_token)
     @ensure_loaded_agent(app)
     async def append_events(request: Request, conversation_id: Text) -> HTTPResponse:
@@ -760,7 +852,7 @@ def create_app(
                 output_channel = _get_output_channel(request, tracker)
 
                 if rasa.utils.endpoints.bool_arg(
-                    request, EXECUTE_SIDE_EFFECTS_QUERY_KEY, False
+                        request, EXECUTE_SIDE_EFFECTS_QUERY_KEY, False
                 ):
                     await processor.execute_side_effects(
                         events, tracker, output_channel
@@ -798,7 +890,7 @@ def create_app(
 
         return events
 
-    @app.put("/conversations/<conversation_id:path>/tracker/events")
+    @app.put("/vbot-intent-task-data/conversations/<conversation_id:path>/tracker/events")
     @requires_auth(app, auth_token)
     @ensure_loaded_agent(app)
     async def replace_events(request: Request, conversation_id: Text) -> HTTPResponse:
@@ -825,7 +917,7 @@ def create_app(
                 f"An unexpected error occurred. Error: {e}",
             )
 
-    @app.get("/conversations/<conversation_id:path>/story")
+    @app.get("/vbot-intent-task-data/conversations/<conversation_id:path>/story")
     @requires_auth(app, auth_token)
     @ensure_loaded_agent(app)
     @ensure_conversation_exists()
@@ -852,7 +944,7 @@ def create_app(
                 f"An unexpected error occurred. Error: {e}",
             )
 
-    @app.post("/conversations/<conversation_id:path>/execute")
+    @app.post("/vbot-intent-task-data/conversations/<conversation_id:path>/execute")
     @requires_auth(app, auth_token)
     @ensure_loaded_agent(app)
     @ensure_conversation_exists()
@@ -913,7 +1005,7 @@ def create_app(
 
         return response.json(response_body)
 
-    @app.post("/conversations/<conversation_id:path>/trigger_intent")
+    @app.post("/vbot-intent-task-data/conversations/<conversation_id:path>/trigger_intent")
     @requires_auth(app, auth_token)
     @ensure_loaded_agent(app)
     async def trigger_intent(request: Request, conversation_id: Text) -> HTTPResponse:
@@ -971,7 +1063,7 @@ def create_app(
 
         return response.json(response_body)
 
-    @app.post("/conversations/<conversation_id:path>/predict")
+    @app.post("/vbot-intent-task-data/conversations/<conversation_id:path>/predict")
     @requires_auth(app, auth_token)
     @ensure_loaded_agent(app)
     @ensure_conversation_exists()
@@ -991,7 +1083,7 @@ def create_app(
                 f"An unexpected error occurred. Error: {e}",
             )
 
-    @app.post("/conversations/<conversation_id:path>/messages")
+    @app.post("/vbot-intent-task-data/conversations/<conversation_id:path>/messages")
     @requires_auth(app, auth_token)
     @ensure_loaded_agent(app)
     async def add_message(request: Request, conversation_id: Text) -> HTTPResponse:
@@ -1041,17 +1133,42 @@ def create_app(
                 f"An unexpected error occurred. Error: {e}",
             )
 
-    @app.post("/model/train")
+    @app.post("/vbot-intent-task-data/model/train")
     @requires_auth(app, auth_token)
     @async_if_callback_url
     @run_in_thread
     @inject_temp_dir
     async def train(request: Request, temporary_directory: Path) -> HTTPResponse:
-        validate_request_body(
-            request,
-            "You must provide training data in the request body in order to "
-            "train your model.",
-        )
+        # validate_request_body(
+        #     request,
+        #     "You must provide training data in the request body in order to "
+        #     "train your model.",
+        # )
+
+        class AsLiteral(str):
+            pass
+
+        def represent_literal(dumper, data):
+            return dumper.represent_scalar(BaseResolver.DEFAULT_SCALAR_TAG,
+                                           data, style="|")
+
+        yaml_path = "body.yml"
+        yaml.add_representer(AsLiteral, represent_literal)
+        with open(yaml_path, encoding="utf-8") as f:
+            datas = yaml.load(f, Loader=yaml.FullLoader)
+        # 新增lookup表
+        # yaml_path_CarSeries = "car_series.yml"
+        # with open(yaml_path_CarSeries, encoding="utf-8") as f:
+        #     datas_lookup_CarSeries = yaml.load(f, Loader=yaml.FullLoader)
+        #     CarSeries = '\n'.join(f"- {item}" for item in datas_lookup_CarSeries)
+        # if datas.get("nlu"):
+        #     for i in range(len(datas['nlu'])):
+        #         if datas['nlu'][i].get('lookup'):
+        #             if datas['nlu'][i]['lookup'] == "CarSeries":
+        #                 datas['nlu'][i]['examples'] = CarSeries
+
+        yaml_datas = yaml.dump(datas, sort_keys=False, allow_unicode=True)
+        request.body = yaml_datas
 
         training_payload = _training_payload_from_yaml(request, temporary_directory)
 
@@ -1066,6 +1183,29 @@ def create_app(
 
             if training_result.model:
                 filename = os.path.basename(training_result.model)
+
+                # 模型上传文件云
+                with open('endpoints.yml', 'r') as f:
+                    config = yaml.safe_load(f)
+                    file_cloud_url = config.get('inner_url').get('domain') + 'filecloud/fileup/up'
+
+                files = {'file': (filename, open('models/' + filename, 'rb'))}
+                file_cloud_res = requests.post(file_cloud_url, files=files)
+                logger.info('upload model to file cloud response: ' + file_cloud_res.text)
+                if file_cloud_res:
+                    dsshandle = file_cloud_res.json()[0].get('result')
+                    redis_config = config.get('tracker_store')
+                    redis_connection = redis.Redis(host=redis_config.get('url'), port=redis_config.get('port'), password=redis_config.get('password'))
+                    redis_connection.set('rasa_model_data', dsshandle)
+
+                # 强制加载模型
+                model_path = 'models/' + filename
+                new_agent = await _load_agent(
+                    model_path=model_path,
+                    endpoints=endpoints,
+                )
+                app.ctx.agent = new_agent
+                logger.info(f"Forced Model Loading '{model_path}'")
 
                 return await response.file(
                     training_result.model,
@@ -1097,12 +1237,48 @@ def create_app(
             with app.ctx.active_training_processes.get_lock():
                 app.ctx.active_training_processes.value -= 1
 
-    @app.post("/model/test/stories")
+    def create_response(input_dict, datas):
+        res_code = 'utter_' + input_dict.get('intentNo') + '_' + input_dict.get('contentId', '')
+        res = input_dict.get('content')
+        if res_code not in datas['actions']:
+            datas['actions'].append(res_code)
+        datas['responses'][res_code] = [{'text': res}]
+        children = input_dict.get('children')
+        if children:
+            for child in children:
+                create_response(child, datas)
+
+    def create_story(input_dict, incomplete_story=None, checkpoint_code=None):
+        if incomplete_story:
+            story = incomplete_story
+        else:
+            story = {'story': 'story_' + input_dict.get('intentNo'), 'steps': []}
+
+        if checkpoint_code:
+            story.get('steps').append({'checkpoint': checkpoint_code})
+        story.get('steps').extend(
+            [{'intent': input_dict.get('intentNo')}, {'action': 'utter_' + input_dict.get('intentNo') + '_' + input_dict.get('contentId', '')}])
+
+        children = input_dict.get('children')
+        if not children or len(children) == 0:
+            story.get('steps').append({'action': 'action_restart'})
+            return [story]
+        elif len(children) == 1:
+            return create_story(children[0], incomplete_story=story)
+        else:
+            checkpoint_code = story.get('story') + '_checkpoint'
+            story.get('steps').append({'checkpoint': checkpoint_code})
+            branches = [story]
+            for child in children:
+                branches.extend(create_story(child, checkpoint_code=checkpoint_code))
+            return branches
+
+    @app.post("/vbot-intent-task-data/model/test/stories")
     @requires_auth(app, auth_token)
     @ensure_loaded_agent(app, require_core_is_ready=True)
     @inject_temp_dir
     async def evaluate_stories(
-        request: Request, temporary_directory: Path
+            request: Request, temporary_directory: Path
     ) -> HTTPResponse:
         """Evaluate stories against the currently loaded model."""
         validate_request_body(
@@ -1128,13 +1304,13 @@ def create_app(
                 f"An unexpected error occurred during evaluation. Error: {e}",
             )
 
-    @app.post("/model/test/intents")
+    @app.post("/vbot-intent-task-data/model/test/intents")
     @requires_auth(app, auth_token)
     @async_if_callback_url
     @run_in_thread
     @inject_temp_dir
     async def evaluate_intents(
-        request: Request, temporary_directory: Path
+            request: Request, temporary_directory: Path
     ) -> HTTPResponse:
         """Evaluate intents against a Rasa model."""
         validate_request_body(
@@ -1185,7 +1361,7 @@ def create_app(
             )
 
     async def _evaluate_model_using_test_set(
-        model_path: Text, test_data_file: Text
+            model_path: Text, test_data_file: Text
     ) -> Dict:
         logger.info("Starting model evaluation using test set.")
 
@@ -1237,9 +1413,9 @@ def create_app(
         return evaluation_results
 
     def _get_evaluation_results(
-        intent_report: CVEvaluationResult,
-        entity_report: CVEvaluationResult,
-        response_selector_report: CVEvaluationResult,
+            intent_report: CVEvaluationResult,
+            entity_report: CVEvaluationResult,
+            response_selector_report: CVEvaluationResult,
     ) -> Dict[Text, Any]:
         eval_name_mapping = {
             "intent_evaluation": intent_report,
@@ -1258,7 +1434,7 @@ def create_app(
 
         return result
 
-    @app.post("/model/predict")
+    @app.post("/vbot-intent-task-data/model/predict")
     @requires_auth(app, auth_token)
     @ensure_loaded_agent(app, require_core_is_ready=True)
     async def tracker_predict(request: Request) -> HTTPResponse:
@@ -1292,7 +1468,7 @@ def create_app(
                 f"An unexpected error occurred. Error: {e}",
             )
 
-    @app.post("/model/parse")
+    @app.post("/vbot-intent-task-data/model/parse")
     @requires_auth(app, auth_token)
     @ensure_loaded_agent(app)
     async def parse(request: Request) -> HTTPResponse:
@@ -1327,7 +1503,7 @@ def create_app(
                 f"An unexpected error occurred. Error: {e}",
             )
 
-    @app.put("/model")
+    @app.put("/vbot-intent-task-data/model")
     @requires_auth(app, auth_token)
     async def load_model(request: Request) -> HTTPResponse:
         validate_request_body(request, "No path to model file defined in request_body.")
@@ -1360,7 +1536,7 @@ def create_app(
         logger.debug(f"Successfully loaded model '{model_path}'.")
         return response.json(None, status=HTTPStatus.NO_CONTENT)
 
-    @app.delete("/model")
+    @app.delete("/vbot-intent-task-data/model")
     @requires_auth(app, auth_token)
     async def unload_model(request: Request) -> HTTPResponse:
         model_file = app.ctx.agent.model_name
@@ -1370,7 +1546,7 @@ def create_app(
         logger.debug(f"Successfully unloaded model '{model_file}'.")
         return response.json(None, status=HTTPStatus.NO_CONTENT)
 
-    @app.get("/domain")
+    @app.get("/vbot-intent-task-data/domain")
     @requires_auth(app, auth_token)
     @ensure_loaded_agent(app)
     async def get_domain(request: Request) -> HTTPResponse:
@@ -1401,7 +1577,7 @@ def create_app(
 
 
 def _get_output_channel(
-    request: Request, tracker: Optional[DialogueStateTracker]
+        request: Request, tracker: Optional[DialogueStateTracker]
 ) -> OutputChannel:
     """Returns the `OutputChannel` which should be used for the bot's responses.
 
@@ -1416,8 +1592,8 @@ def _get_output_channel(
     requested_output_channel = request.args.get(OUTPUT_CHANNEL_QUERY_KEY)
 
     if (
-        requested_output_channel == USE_LATEST_INPUT_CHANNEL_AS_OUTPUT_CHANNEL
-        and tracker
+            requested_output_channel == USE_LATEST_INPUT_CHANNEL_AS_OUTPUT_CHANNEL
+            and tracker
     ):
         requested_output_channel = tracker.get_latest_input_channel()
 
@@ -1433,7 +1609,7 @@ def _get_output_channel(
     # otherwise use `CollectingOutputChannel`
     return reduce(
         lambda output_channel_created_so_far, input_channel: (
-            input_channel.get_output_channel() or output_channel_created_so_far
+                input_channel.get_output_channel() or output_channel_created_so_far
         ),
         matching_channels,
         CollectingOutputChannel(),
@@ -1452,11 +1628,14 @@ def _test_data_file_from_payload(request: Request, temporary_directory: Path) ->
 
 
 def _training_payload_from_yaml(
-    request: Request, temp_dir: Path, file_name: Text = "data.yml"
+        request: Request, temp_dir: Path, file_name: Text = "data.yml"
 ) -> Dict[Text, Any]:
     logger.debug("Extracting YAML training data from request body.")
 
-    decoded = request.body.decode(rasa.shared.utils.io.DEFAULT_ENCODING)
+    if not isinstance(request.body, str):
+        decoded = request.body.decode(rasa.shared.utils.io.DEFAULT_ENCODING)
+    else:
+        decoded = request.body
     _validate_yaml_training_payload(decoded)
 
     training_data = temp_dir / file_name
@@ -1478,7 +1657,7 @@ def _training_payload_from_yaml(
 
 
 def _nlu_training_payload_from_json(
-    request: Request, temp_dir: Path, file_name: Text = "data.json"
+        request: Request, temp_dir: Path, file_name: Text = "data.json"
 ) -> Dict[Text, Any]:
     logger.debug("Extracting JSON training data from request body.")
 
