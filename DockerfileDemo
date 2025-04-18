@@ -1,0 +1,30 @@
+FROM 10.64.21.107:83/demo/vbot-intent-task:v1.0.0-20241104
+
+ARG PIP_USERNAME
+ARG PIP_PWD
+ENV PIP_USERNAME=$PIP_USERNAME
+ENV PIP_PWD=$PIP_PWD
+# 设置时区
+ENV TZ=Asia/Shanghai
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
+ENV WORK_DIR=/opt/vbot-intent-task-di
+RUN mkdir $WORK_DIR
+ADD requirements.txt start.sh svn.sh src/  $WORK_DIR/
+
+RUN chmod 755 $WORK_DIR/start.sh
+RUN chmod 755 $WORK_DIR/svn.sh
+ENV PYTHONPATH="$WORK_DIR/"
+
+# 安装依赖包
+ENV PIP_HOST=tspdemo.changan.com.cn
+ENV PIP_URL=http://$PIP_USERNAME:$PIP_PWD@$PIP_HOST/nexus/repository/pypi-public/simple
+RUN python -m pip install --upgrade pip -i $PIP_URL --trusted-host $PIP_HOST
+RUN python -m pip install --upgrade setuptools_scm -i $PIP_URL --trusted-host $PIP_HOST
+RUN pip install -r $WORK_DIR/requirements.txt -i $PIP_URL --trusted-host $PIP_HOST
+
+# 声明工作目录
+WORKDIR  $WORK_DIR
+
+EXPOSE 5005
+CMD ["/bin/bash","start.sh"]
