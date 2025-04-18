@@ -1,0 +1,643 @@
+pipeline:
+  - name: SpacyNLP
+    model: "zh_core_web_sm"
+    case_sensitive: TRUE
+    intent_tokenization_flag: True
+    intent_split_symbol: "_"
+  - name: SpacyTokenizer
+  - name: SpacyFeaturizer
+#  - name: SpacyEntityExtractor
+  - name: RegexFeaturizer
+  - name: RegexEntityExtractor
+    use_lookup_tables: True
+    use_regexes: True
+    use_word_boundaries: False
+  - name: LexicalSyntacticFeaturizer
+  - name: CountVectorsFeaturizer
+    analyzer: "char_wb"
+    min_ngram: 1
+    max_ngram: 4
+  - name: DIETClassifier
+    epochs: 100
+    constrain_similarities: true
+  - name: EntitySynonymMapper
+  - name: ResponseSelector
+    epochs: 100
+    constrain_similarities: true
+
+policies:
+  - name: MemoizationPolicy
+  - name: TEDPolicy
+  - name: RulePolicy
+
+intents:
+  - DataValue:
+      use_entities:
+        - CarSeries
+        - DataSource
+  - DataCost:
+      use_entities:
+        - CarSeries
+        - DataSource
+  - DataROI:
+      use_entities:
+        - CarSeries
+        - DataSource
+  - DataRemoval:
+      use_entities:
+        - CarSeries
+        - DataSource
+  - DataClassification:
+      use_entities:
+        - CarSeries
+        - DataSource
+  - DataUsage:
+      use_entities:
+        - CarSeries
+        - DataSource
+  - GetElectricityData:
+      use_entities:
+        - CarSeries
+        - Time
+        - Mean
+        - Variance
+        - StateOfCharge
+
+
+entities:
+  - CarSeries
+  - DataSource
+  - Time
+  - Mean
+  - Variance
+  - StateOfCharge
+
+
+slots:
+  CarSeries:
+    type: text
+    influence_conversation: true
+    mappings:
+    - type: from_entity
+      entity: CarSeries
+  DataSource:
+    type: text
+    influence_conversation: true
+    mappings:
+      - type: from_entity
+        entity: DataSource
+  Time:
+    type: text
+    influence_conversation: true
+    mappings:
+      - type: from_entity
+        entity: Time
+  Mean:
+    type: text
+    influence_conversation: false
+    mappings:
+      - type: from_entity
+        entity: Mean
+  Variance:
+    type: text
+    influence_conversation: false
+    mappings:
+      - type: from_entity
+        entity: Variance
+  StateOfCharge:
+    type: text
+    influence_conversation: false
+    mappings:
+      - type: from_entity
+        entity: StateOfCharge
+
+
+
+actions:
+  - utter_ask_continue
+  - utter_default
+  - action_call_external_api
+  - action_call_external_api_electricity
+
+forms: {}
+
+e2e_actions: []
+
+responses:
+
+  utter_ask_continue:
+  - text: 是否要继续？
+
+  utter_default:
+  - text: 系统不明白您说的话，请换个说法。
+
+  utter_quit_multi_round_dialogue:
+  - text: 重复问询未得到结果，已退出此多轮场景。
+
+
+session_config:
+  session_expiration_time: 60
+  carry_over_slots_to_new_session: true
+
+nlu:
+- lookup: CarSeries
+  examples: |
+    - S401
+    - CS95
+    - S202
+    - UNI-T
+    - S311-D20T
+    - CS75 PLUS运动版
+    - S302-ICA
+    - 2021款CS85COUPE
+    - C211
+    - 第二代逸动
+    - S111-ICA
+    - CS35PLUS蓝鲸版
+    - CD569
+    - UNI-K
+    - S111
+    - CS35PLUS
+    - S203EV
+    - CS55 E-Rock
+    - C211MCA
+    - 逸动PLUS
+    - P201
+    - F70
+    - S301-ICA
+    - 新CS75-2020款
+    - S301-MCA
+    - 新CS75 蓝鲸版
+    - C211MCA-r
+    - 2021款逸动PLUS
+    - C281
+    - UNI-V
+    - CS75PLUS-ICA
+    - CS75PLUS-ICA
+    - S202-ICA2
+    - UNI-T ICA2（MAC2）
+    - CD569-ICA
+    - CD569-ICA
+    - C211EV5
+    - 逸动EV 460
+    - C385-EVE
+    - SL03增程版
+    - S203
+    - 第二代CS55PLUS
+    - C385
+    - SL03
+    - S311-ICA2
+    - 2022款CS75 PLUS
+    - S111-2022
+    - 全新CS35PLUS 2022款
+    - C673
+    - S7
+    - P201MCA1
+    - P201MCA1
+    - C673-EVE
+    - S7增程版
+    - C589P
+    - 长安启源A05
+    - C281-ICA1-P
+    - 长安启源A06
+    - S203ICA1-P
+    - 长安启源Q05
+    - B561ICA2
+    - UNI-Z
+    - P201RE
+    - P201RE
+    - C211EV
+    - 第二代逸动电动
+    - C318
+    - G318
+    - C385MCA1
+    - L07
+    - S311ICA5
+    - 第三代CS75PLUS冠军版
+    - S311-H15T
+    - CS75 PLUS畅享版
+    - S302
+    - CS85COUPE
+    - CD569-DA
+    - CD569DA
+    - S302-ICA2
+    - 2022款CS85COUPE
+    - CD569-2
+    - 2024款UNI-K
+    - CD569-NE15
+    - CD569NE15
+    - S301-ICA-r
+    - CS75荣耀百万款
+    - S301MCA-1
+    - CS75畅享版
+    - C281-D
+    - UNI-V_DR2.0
+    - C212
+    - 第二代逸动XT
+    - S201
+    - CS55
+    - C212-EV
+    - 逸动ET
+    - C236ICA2
+    - 长安启源A07
+    - S311MCA1-PHEV
+    - 第三代CS75PLUS智电iDD
+    - S301PHEV
+    - CS75混动
+    - S301-18
+    - 新CS75
+    - S401-MCA1
+    - 全新CS95
+    - B311EV-MCA
+    - CS15E-Pro
+    - S111-MCA
+    - 全新CS35PLUS
+    - S201-MCA
+    - CS55PLUS
+    - S311-MCA
+    - 第二代CS75PLUS
+    - CD569-P
+    - UNI-K iDD
+    - A158
+    - Lumin
+    - C211MCA-rr
+    - 2022款逸动PLUS
+    - C281-P
+    - UNI-V 智电iDD
+    - A158ICA1
+    - Lumin ICA1
+    - S201-MCA1
+    - CS55 PLUS换代
+    - S401-MCA2
+    - CS95PLUS
+    - C589
+    - S111-2
+    - CS35PLUS畅享版
+    - S202-MCA
+    - 第二代UNI-T
+    - S311-1
+    - CS75PLUS运动版
+    - C211-E-7
+    - 第二代逸动EV( 换电版）
+    - S203-SVP
+    - 第二代CS55PLUS
+    - C211-1
+    - 逸动PLUS
+    - C385-1
+    - SL03高配版
+    - C385-ICA2
+    - SL03 ICA2
+    - C236
+    - 长安启源A07
+    - S203ICA1-ICE
+    - 第三代CS55PLUS
+    - B561ICA2-P13
+    - UNI-Z
+    - C281-ICA1-ICE
+    - UNI-V-ICA1_ICE
+    - C281-ICA1(PHEV)
+    - 第二代UNI-V
+    - S311MCA1-P(ICE)
+    - 第三代CS75PLUS
+    - C236ICA1
+    - 长安启源A07
+    - S301MCA-2
+    - CS75畅享版
+    - S401MCA-r
+    - 2021款CS95
+    - S301
+    - CS75
+    - C207PHEV
+    - 逸动插电式混动车
+    - C589-1
+    - 第三代逸动
+    - B311
+    - CS15
+    - S111-ICA2
+    - S111-1
+    - CS35PLUS荣耀百万版
+    - S202-ICA
+    - UNI-T短期改款
+    - C211EV2
+    - 逸动 E-life
+    - CD569P-ICA1
+    - UNI-K 智电iDD
+    - CD569-1
+    - 2024款UNI-K智电iDD
+    - P201MCA1-ICA1
+    - C301-ICA2
+    - C206
+    - 逸动EV200
+    - CD701
+    - 启源E07
+    - C301
+    - 睿骋CC
+    - C301-MCA
+    - 锐程PLUS
+    - G393
+    - S311
+    - CS75Plus
+    - C589ICA1
+    - 长安启源A05
+    - C301ICA1
+    - 锐程CC蓝鲸版
+    - C301ICA-rr
+    - 锐程CC蓝鲸版
+    - C301ICA
+    - 锐程CC
+    - C928
+    - 第四代CS75PLUS
+    - C857
+    - S05
+    - J90A
+    - Mazda EZ-6
+    - C673-ICA
+    - S07
+    - F202
+    - 欧尚X7
+    - F202EV
+    - 欧尚X7EV
+    - F202ICA
+    - 欧尚X7ICA
+    - F202MCA
+    - 欧尚X7PLUS
+    - F202ICA3
+    - 第二代X7PLUS
+    - B316
+    - 欧尚X5
+    - B316MCA
+    - 欧尚X5PLUS
+    - B316MCA1-1
+    - X5PLUS
+    - B561
+    - 欧尚Z6
+    - B561PHEV
+    - 欧尚Z6iDD
+    - S203-2
+    - 长安启源Q05
+    - C589E
+    - C281-3
+    - C281-3 ICE
+    - C589-2
+    - 第三代逸动 新蓝鲸
+    - C928-1
+    - 第四代CS75PLUS
+    - C318-1
+    - E12REEV
+    - 阿维塔 12
+    - E15REEV
+    - 阿维塔 07
+    - E15
+    - E11REEV
+    - 阿维塔 11
+    - E12
+    - 阿维塔 12
+    - E11
+    - Q05
+    - A05
+    - A06
+    - A07
+    - CS75 PLUS
+
+
+- lookup: DataSource
+  examples: |
+    - 数据集A
+    - 数据集B
+    - 数据集C
+    - 数据集D
+    - 数据集E
+    - 数据集F
+
+- intent: DataValue
+  examples: |
+    - 请评估[CS75](CarSeries)的信号[数据集X](DataSource)的价值。
+    - 我想知道[A07](CarSeries)的信号[数据集Y](DataSource)的价值评分。
+    - 请给我一个[S05](CarSeries)信号[数据集Z](DataSource)的价值评估报告。
+    - [车系D](Q07)的信号[数据集W](DataSource)的价值是多少？
+
+- intent: DataCost
+  examples: |
+    - 请评估[CS95](CarSeries)的信号[数据集X](DataSource)的存储和处理成本。
+    - 我想知道[A06](CarSeries)的信号[数据集Y](DataSource)的存储成本。
+    - 请给我一个[A05](CarSeries)信号[数据集Z](DataSource)的处理成本报告。
+    - [A07](CarSeries)的信号[数据集W](DataSource)的总成本是多少？
+
+- intent: DataROI
+  examples: |
+    - 请评估[Q05](CarSeries)的信号[数据集X](DataSource)的ROI。
+    - 我想知道[CS75](CarSeries)的信号[数据集Y](DataSource)的ROI评分。
+    - 请给我一个[CS85](CarSeries)信号[数据集Z](DataSource)的ROI评估报告。
+    - [S09](CarSeries)的信号[数据集W](DataSource)的ROI是多少？
+
+- intent: DataRemoval
+  examples: |
+    - 请确定[S05](CarSeries)的信号[数据集X](DataSource)的清退策略。
+    - 我想知道[L07](CarSeries)的信号[数据集Y](DataSource)是否需要清退。
+    - 请给我一个[G318](CarSeries)信号[数据集Z](DataSource)的清退建议。
+    - [Q07](CarSeries)的信号[数据集W](DataSource)是否需要保留？
+
+- intent: DataClassification
+  examples: |
+    - 请确定[CS75](CarSeries)的信号[数据集X](DataSource)的分类存储策略。
+    - 我想知道[CS55](CarSeries)的信号[数据集Y](DataSource)应该如何存储。
+    - 请给我一个[CS95](CarSeries)信号[数据集Z](DataSource)的分类存储建议。
+    - [A05](CarSeries)的信号[数据集W](DataSource)应该存储在哪些介质上？
+
+- intent: DataUsage
+  examples: |
+    - 请优化[CS85](CarSeries)的信号[数据集X](DataSource)的使用方式。
+    - 我想知道[Q05](CarSeries)的信号[数据集Y](DataSource)如何优化使用。
+    - 请给我一个[L07](CarSeries)信号[数据集Z](DataSource)的使用优化建议。
+    - [S09](CarSeries)的信号[数据集W](DataSource)如何提高使用效率？
+
+- regex: Time
+  examples: |
+    - 近(?:\S+)?(月|天|日)
+    - (昨天|前天|上个月)
+    - 上周([一二三四五六日天末]|[12343567])(到周([一二三四五六日天末]|[1234567]))?
+    - (\d{1,2}月|一月|二月|三月|四月|五月|六月|七月|八月|九月|十月|十一月|十二月)
+    - ((?:\S{2,4}年)?\S{1,2}月(\S{1,2}日)?(至今)?)
+    - ((?:近|过去)\S{1,2}(?:月|星期|周|天))
+    - ^(?:(\d{1,2}月\S{1,2}日(?:至|到)\d{1,2}月\S{1,2}日)|((?:一月|二月|三月|四月|五月|六月|七月|八月|九月|十月|十一月|十二月|\d{1,2}月)\S{1,2}日(?:至|到)(?:一月|二月|三月|四月|五月|六月|七月|八月|九月|十月|十一月|十二月|\d{1,2}月)\S{1,2}日))$
+    - (\S{2,4}年\S{1,2}月\S{1,2}日)(?:至|到)(\S{2,4}年\S{1,2}月\S{1,2}日)
+    
+
+- regex: Mean
+  examples: |
+    - ^平均值(?:大于|小于)(\d{1,2}(\.\d{1,2})?)$
+
+- regex: Variance
+  examples: |
+    - ^方差(?:大于|小于)(\d{1,2}(\.\d{1,2})?)$
+
+- regex: StateOfCharge
+  examples: |
+    - ^SOC([^0-9-]*)(-?\d{1,2}\.?\d{1,2})$
+
+
+- intent: GetElectricityData
+  examples: |
+    - [C211](CarSeries)[近七天](Time)出现亏电异常告警时，车辆的累计放电量、真实电量是多少?
+    - 看看[CD569](CarSeries)[近一个月](Time)出现亏电异常告警时，车辆的累计放电量情况?
+    - [CS75 PLUS运动版](CarSeries)[近7天](Time)出现亏电异常告警时，车辆的累计放电量和真实电量是多少?
+    - 查询[CS35PLUS](CarSeries)车系[2月25日至今](Time)亏电历史异常告警时累计放电量、真实电量?
+    - 查询[S203EV](CarSeries)[近30日](Time)亏电历史异常告警时累计放电量，真实电量信号?
+    - 帮我查一查[逸动PLUS](CarSeries)[近30日](Time)亏电历史异常告警时累计放电量、真实电量明细数据?
+    - 分别查询[S301PHEV](CarSeries)车系[2月25日至2月28日](Time)亏电异常告警时累计放电量真实电量情况?
+    - 分别查询[F70](CarSeries)车系[3月15日至4月2日](Time)亏电异常告警时累计放电量,真实电量情况?
+    - 分别查询[S301-ICA](CarSeries)车系[1月25日到3月28日](Time)亏电异常告警时真实电量和累计放电量情况?
+    - 查询[新CS75-2020款](CarSeries)车系[4月3日](Time)亏电历史异常告警时累计放电量 真实电量信号情况?
+    - 查询[S301-MCA](CarSeries)[近2月](Time)亏电历史异常告警时累计放电量信号?
+    - 查询[新CS75 蓝鲸版](CarSeries)[近20天](Time)亏电历史异常告警时真实电量和累计放电量是多少?
+    - 查[C211MCA-r](CarSeries)[上个月](Time)亏电历史异常告警时累计放电量和真实电量是多少?
+    - 查一查[UNI-V](CarSeries)[最近3星期](Time)亏电历史异常告警时累计放电量、真实电量明细数据?
+    - 查[过去6个月](Time)[CS75PLUS-ICA](CarSeries)亏电异常告警时累计放电量。
+    - [2025年3月1日至2025年3月28日](Time)[逸动EV 460](CarSeries)车辆出现亏电时累计放电量、真实电量是多少？
+    - [4月](Time)[SL03增程版](CarSeries)车辆真实电量存在异常且蓄电瓶持续掉电时的真实电量情况？
+    - [上个月](Time)启源[S203](CarSeries)出现异常亏电的车辆有哪些？
+    - 帮我查一查[第二代CS55PLUS](CarSeries)[25/02/12到25/03/15](Time)亏电历史异常告警时真实电量 累计放电量明细数据?
+    - [C385](CarSeries)[上个月3号到18号](Time)异常告警时真实电量明细数据?
+    - [SL03](CarSeries)[上周一](Time)亏电异常告警时累计放电量明细数据?
+    - [S311-ICA2](CarSeries)车系[1月25日到3月28日](Time)亏电异常告警时真实电量和累计放电量情况
+    - [第二代逸动XT](CarSeries)[近20天](Time)亏电历史异常告警时真实电量和累计放电量是多少？
+    - [CS95](CarSeries)[近7天](Time)出现亏电异常告警时，车辆的累计放电量和真实电量是多少？
+    - [2025年3月1日至2025年3月28日](Time)[S111-2022](CarSeries)车辆出现亏电时累计放电量、真实电量是多少？
+    - [Lumin](CarSeries)车系[2月25日至2月28日](Time)亏电异常告警时累计放电量真实电量情况？
+    - [上个月3号到18号](Time)[全新CS35PLUS 2022款](CarSeries)异常告警时真实电量明细数据？
+    - [上周3](Time)[C673](CarSeries)亏电异常告警时累计放电量明细数据？
+    - [S7](CarSeries)在[2025年3月至今](Time)出现亏电异常告警时，车辆的累计放电量情况？
+    - [P201MCA1](CarSeries)车系[2025-03-11至2025-04-10](Time)亏电历史异常告警时累计放电量、真实电量明细数据？
+    - 启源[S7增程版](CarSeries)出现异常亏电的车辆有哪些？
+    - 从[2月25日到今天](Time)，当[C589P](CarSeries)遇到亏电历史异常告警时，其累计放电量和真实电量的数据是怎样的？
+    - 在整个[四月](Time)，若[第四代CS75PLUS](CarSeries)车辆的真实电量存在异常且蓄电瓶持续掉电，那么真实电量的情况如何？
+    - [上周一](Time)，当[长安启源A06](CarSeries)出现亏电异常告警时，累计放电量的详细数据是什么？
+    - [上个月](Time)，哪些[启源Q05](CarSeries)车辆出现了异常亏电？
+    - [最近3天](Time)，当[Q05](CarSeries)遭遇亏电异常告警时，累计放电量信息？
+    - [过去六个月](Time)，关于[C857](CarSeries)车型在亏电异常告警时的累计放电量有何发现？
+    - [A06](CarSeries)[近三十天](Time)亏电历史异常告警时累计放电量，真实电量信号？
+    - 在[过去的30天](Time)里，[欧尚Z6](CarSeries)出现亏电异常告警时，它的累计放电量和真实电量信号是什么？
+    - [近一个月](Time)，关于[Lumin](CarSeries)车型在亏电历史异常告警时的累计放电量和真实电量明细数据有哪些？
+    - 考虑[过去两个月](Time)，[深蓝S09](CarSeries)车型在亏电历史异常告警时的累计放电量信号有何特点？
+    - 在[上个月的3号到18号](Time)，[Q07](CarSeries)在异常告警时的真实电量情况怎样？
+    - 关注[2月25日至2月28日期间](Time)，当[Q05](CarSeries)遭遇亏电异常告警时，累计放电量和真实电量的情况。
+    - 关注[三月五日至今](Time)，当[UNI-K 智电iDD](CarSeries)遭遇亏电异常告警时，累计放电量和真实电量的情况。
+    - 对于[CS75 PLUS](CarSeries)，在[近7天](Time)内发生的亏电异常告警中，累计放电量和真实电量分别是多少？
+    - 自[2025年3月至今](Time)，[UNI-K 智电iDD](CarSeries)发生亏电异常告警时，车辆的累计放电量情况如何？
+    - 帮我查[过去的一周](Time)里，[C236ICA2](CarSeries)出现亏电异常告警时的累计放电量和真实电量信号？
+    - [过去一周](Time)，[C589-1](CarSeries)遭遇亏电异常告警时，累计放电量和真实电量的情况？
+    - [过去30天](Time)[C211EV5](CarSeries)真实电量[平均值小于70](Mean)，或者[方差小于80](Variance)，同时[SOC连续变化且为-5](StateOfCharge)时的累计放电量是多少？
+    - [昨天](Time)[C385-EVE](CarSeries)车型中真实电量[方差大于10](Variance)，或[平均值大于50](Mean)，同时蓄电瓶持续掉电时的累计放电量是多少？
+    - [过去1个月](Time)，如果[逸动PLUS](CarSeries)的真实电量[平均值小于70](Mean)，或者[方差大于6](Variance)，同时[SOC连续变化为-1.5](StateOfCharge)时，累计放电量会是多少？
+    - [昨天](Time)[CS75 PLUS畅享版](CarSeries)车型中真实电量[方差大于15](Variance)，或[平均值大于20](Mean)，同时蓄电瓶持续掉电时的累计放电量是多少？
+    - [三月五日至四月二日](Time)[全新CS35PLUS 2022款](CarSeries)真实电量[方差大于20](Variance)且[平均值大于80](Mean)，同时[SOC连续变化为-1.2](StateOfCharge)时的累计放电量是多少？
+    - [昨天](Time)[2022款CS75 PLUS](CarSeries)车型中真实电量[平均值小于78.5](Mean)，或者[方差小于70](Variance)，同时蓄电瓶持续掉电时的累计放电量是多少？
+    - [过去3天](Time)[深蓝G318](CarSeries)真实电量[平均值小于9.9](Mean)，或者[方差大于20.5](Variance)同时[SOC连续变化为-5](StateOfCharge)时的真实电量是多少
+    - [过去5天](Time)[S401-MCA1](CarSeries)车型中真实电量[方差小于18](Variance)，[平均值大于8.8](Mean)，同时蓄电瓶持续掉电时的累计放电量是多少？
+    - [过去一个月](Time)[CD569-P](CarSeries)真实电量[方差小于25](Variance)，或者[平均值大于70.5](Mean)同时[SOC连续变化为-1.2](StateOfCharge) 时的真实电量是多少？
+    - [过去10天](Time)[S7增程版](CarSeries)真实电量[平均值小于75.8](Mean)，或[方差大于12](Variance)，同时[SOC连续变化为-0.6](StateOfCharge) 时的累计放电量是多少？
+    - [上个月](Time)[A158ICA1](CarSeries)车型中真实电量[平均值大于17.2](Mean)，或[方差小于2.4](Variance)，同时[SOC连续变化为-0.2](StateOfCharge) 时的累计放电量是多少
+    - [过去6天](Time)[第二代逸动XT](CarSeries)车型中真实电量[平均值大于7.2](Mean)，或者[方差小于24](Variance)，且[SOC连续变化为-15](StateOfCharge) 时的累计放电量是多少？
+    - [一月十五日至二月十五日](Time)[SL03 ICA2](CarSeries)车型中真实电量[平均值小于60.6](Mean)，或[方差大于8.7](Variance)，同时蓄电瓶持续掉电时的累计放电量是多少？
+    - [过去2周](Time)，如果[CS75 PLUS畅享版](CarSeries)的真实电量[平均值小于75](Mean)，或者[方差大于7](Variance)，同时[SOC连续变化为-0.3](StateOfCharge) 时，累计放电量会是多少？
+    - [前天](Time)[第三代CS75PLUS冠军版](CarSeries)车型中真实电量[平均值小于85](Mean)，或者且[方差小于10](Variance)，同时蓄电瓶持续掉电时的累计放电量是多少？
+    - [十二月一日至十二月三十一日](Time)[全新CS35PLUS 2021款](CarSeries)真实电量[方差大于18](Variance)且[平均值小于90.5](Mean)，同时[SOC连续变化且为-5](StateOfCharge)时的累计放电量是多少？
+    - [过去3天](Time)[第二代逸动XT](CarSeries)车型中真实电量[平均值小于72](Mean)，或者[方差大于22](Variance)，同时蓄电瓶持续掉电时的累计放电量是多少？
+    - [过去一周](Time)[UNI-Z](CarSeries)真实电量[方差大于25](Variance)，或者[平均值小于68](Mean)同时[SOC连续变化为-4](StateOfCharge)时的真实电量是多少？
+    - [过去10天](Time)，[C318](CarSeries)真实电量[平均值大于30.5](Mean)，或[方差小于95](Variance)，同时[SOC连续变化且为-5](StateOfCharge)时的累计放电量是多少
+    - [昨天](Time)[Q05](CarSeries)车型中真实电量[平均值大于25](Mean)或[方差大于10](Variance)时，[SOC连续变化且为-4](StateOfCharge)时的累计放电量是多少
+    - [过去7天](Time)[CS85COUPE](CarSeries)真实电量[平均值大于85](Mean)同时[SOC连续变化为-3](StateOfCharge)时的累计放电量是多少？
+    - [昨天](Time)[CD569-DA](CarSeries)车型中真实电量[方差小于60](Variance)且蓄电瓶持续掉电时的真实电量是多少？
+    - [三月十日至三月十五日](Time)[2022款CS85COUPE](CarSeries)真实电量[平均值小于75](Mean)时的累计放电量是多少？
+    - [过去48小时](Time)[CD569NE15](CarSeries)真实电量[方差大于45](Variance)同时[SOC连续变化为-2](StateOfCharge)时的放电量是多少？
+    - [本周一至周三](Time)[CS75荣耀百万款](CarSeries)车型中真实电量[平均值大于80](Mean)时的真实电量是多少？
+    - [前天](Time)[S301MCA-1](CarSeries)真实电量[方差小于50](Variance)且蓄电瓶持续掉电时的累计放电量是多少？
+    - [十二月十五日至十二月二十日](Time)[CS75畅享版](CarSeries)真实电量[平均值小于70](Mean)时的真实电量是多少？
+    - [过去2天](Time)[C212-EV](CarSeries)真实电量[方差大于30](Variance)同时[SOC连续变化为-1](StateOfCharge)时的累计放电量是多少？
+    - [今天](Time)[逸动ET](CarSeries)车型中真实电量[平均值大于90](Mean)时的真实电量是多少？
+    - [过去一天](Time)[C236ICA2](CarSeries)真实电量[方差小于25](Variance)且蓄电瓶持续掉电时的累计放电量是多少？
+    - [3月20日至三月21日](Time)[长安启源A07](CarSeries)真实电量[平均值小于65](Mean)时的累计放电量是多少？
+    - [过去15天](Time)[S311MCA1-PHEV](CarSeries)真实电量[方差大于20](Variance)同时[SOC连续变化为-4](StateOfCharge)时的放电量是多少
+    - [本周四至周日](Time)[第三代CS75PLUS冠军版](CarSeries)车型中真实电量[平均值大于78](Mean)时的真实电量是多少
+    - [本周二至周三](Time)[CS55](CarSeries)车型中真实电量[平均值大于82](Mean)时的真实电量是多少？
+    - [过去10分钟](Time)[S311-MCA](CarSeries)真实电量[方差小于8](Variance)且蓄电瓶持续掉电时的累计放电量是多少？
+    - [过去五天](Time)[B311EV-MCA](CarSeries)真实电量[方差大于12](Variance)同时[SOC连续变化为-3](StateOfCharge)时的放电量是多少？
+    - [本月3号到18号](Time)[CS85COUPE](CarSeries)真实电量[平均值小于72.3](Mean)同时[SOC持续变化-0.8](StateOfCharge)时的放电量是多少？
+    - [过去48小时](Time)[CD569-DA](CarSeries)车型中真实电量[方差大于18.7](Variance)且蓄电瓶掉电时的累计电量是多少？
+    - [本月](Time)[CD569NE15](CarSeries)真实电量[方差小于24.5](Variance)同时[SOC变化-0.5](StateOfCharge)时的放电量是多少？
+    - [本周二至周三](Time)[CS75荣耀百万款](CarSeries)车型中真实电量[平均值小于79.8](Mean)时的真实电量是多少？
+    - [周四至周五](Time)[C212-EV](CarSeries)真实电量[方差小于12.8](Variance)同时[SOC变化-1.5](StateOfCharge)时的放电量是多少？
+    - [本周一至周三](Time)[S311MCA1-PHEV](CarSeries)真实电量[方差大于22.5](Variance)同时[SOC变化-4.0](StateOfCharge)时的放电量是多少？
+
+rules:
+- rule: 评估数据价值
+  condition:
+    - slot_was_set:
+        - CarSeries: true
+        - DataSource: true
+  steps:
+  - intent: DataValue
+  - action: action_call_external_api
+  - action: action_restart
+
+- rule: 评估数据成本
+  condition:
+    - slot_was_set:
+        - CarSeries: true
+        - DataSource: true
+  steps:
+  - intent: DataCost
+  - action: action_call_external_api
+  - action: action_restart
+
+- rule: 评估数据ROI
+  condition:
+    - slot_was_set:
+        - CarSeries: true
+        - DataSource: true
+  steps:
+  - intent: DataROI
+  - action: action_call_external_api
+  - action: action_restart
+
+- rule: 制定清退策略
+  condition:
+    - slot_was_set:
+        - CarSeries: true
+        - DataSource: true
+  steps:
+  - intent: DataRemoval
+  - action: action_call_external_api
+  - action: action_restart
+
+- rule: 制定分类存储策略
+  condition:
+    - slot_was_set:
+        - CarSeries: true
+        - DataSource: true
+  steps:
+  - intent: DataClassification
+  - action: action_call_external_api
+  - action: action_restart
+
+- rule: 优化数据使用
+  condition:
+    - slot_was_set:
+        - CarSeries: true
+        - DataSource: true
+  steps:
+  - intent: DataUsage
+  - action: action_call_external_api
+  - action: action_restart
+
+- rule: 查车辆电量数据
+  condition:
+    - slot_was_set:
+        - Time: true
+        - CarSeries: true
+  steps:
+  - intent: GetElectricityData
+  - action: action_call_external_api_electricity
+  - action: action_restart
+
+stories: []
